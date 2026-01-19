@@ -179,29 +179,35 @@ static GType gst_pylon_nvsurface_layout_enum_get_type(void) {
 #endif
 
 /* pad templates */
+/* pad templates */
 // clang-format off
 #ifdef NVMM_ENABLED
-#  define NVMM_GST_VIDEO_CAPS                  ";"       \
-        GST_VIDEO_CAPS_MAKE_WITH_FEATURES("memory:NVMM", \
-                                          " {GRAY8, RGB, BGR, YUY2, UYVY} ")
+// 1. Define NVMM caps with PRIORITY (no leading semicolon, intended to be first)
+#  define NVMM_GST_VIDEO_CAPS_PRIORITY \
+       GST_VIDEO_CAPS_MAKE_WITH_FEATURES("memory:NVMM", \
+                                         " {GRAY8, RGB, BGR, YUY2, UYVY} ") ";"
 #else
-#  define NVMM_GST_VIDEO_CAPS
+#  define NVMM_GST_VIDEO_CAPS_PRIORITY
 #endif
 
- static GstStaticPadTemplate gst_pylon_src_src_template =
+static GstStaticPadTemplate gst_pylon_src_src_template =
     GST_STATIC_PAD_TEMPLATE(
         "src", GST_PAD_SRC, GST_PAD_ALWAYS,
-        GST_STATIC_CAPS(GST_VIDEO_CAPS_MAKE(
-            " {GRAY8, RGB, BGR, YUY2, UYVY} ") ";"
-                                               "video/"
-                                               "x-bayer,format={rggb,bggr,gbgr,"
-                                               "grgb},"
-                                               "width=" GST_VIDEO_SIZE_RANGE
-                                               ",height=" GST_VIDEO_SIZE_RANGE
-                                               ",framerate"
-                                               "=" GST_VIDEO_FPS_RANGE
-                                               NVMM_GST_VIDEO_CAPS
-         )
+        GST_STATIC_CAPS(
+            /* --- 1. Hardware/NVMM Caps (Highest Priority) --- */
+            NVMM_GST_VIDEO_CAPS_PRIORITY
+
+            /* --- 2. Standard Raw Caps (System Memory) --- */
+            GST_VIDEO_CAPS_MAKE(" {GRAY8, RGB, BGR, YUY2, UYVY} ")
+            ";"
+
+            /* --- 3. Bayer Caps (System Memory) --- */
+            "video/x-bayer, "
+            "format = (string) { rggb, bggr, gbrg, grbg }, "
+            "width = " GST_VIDEO_SIZE_RANGE ", "
+            "height = " GST_VIDEO_SIZE_RANGE ", "
+            "framerate = " GST_VIDEO_FPS_RANGE
+        )
     );
 // clang-format on
 
