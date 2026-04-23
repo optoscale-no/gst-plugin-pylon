@@ -338,12 +338,42 @@ static void gst_pylon_src_class_init(GstPylonSrcClass *klass) {
                                    GST_PARAM_MUTABLE_READY)));
 #endif
 
-  cam_params = gst_pylon_camera_get_string_properties();
-  stream_params = gst_pylon_stream_grabber_get_string_properties();
+  /*
+   * Skip the expensive enumeration of all connected cameras at class_init
+   * time.  The previous code opened every camera, walked all GenICam
+   * features, and serialised them into a blurb string — solely for display
+   * by gst-inspect-1.0.  This added ~5 s of startup latency on every
+   * pipeline launch.
+   *
+   * The full property listing can still be obtained at runtime via
+   * gst-inspect-1.0 or by querying the child-proxy "cam"/"stream" objects.
+   *
+   * Set GST_PYLONSRC_ENUMERATE_PROPERTIES=1 to restore the old behaviour
+   * (useful for documentation / gst-inspect output).
+   */
+  const gchar *enumerate_env =
+      g_getenv("GST_PYLONSRC_ENUMERATE_PROPERTIES");
+  gboolean enumerate_properties =
+      enumerate_env && g_strcmp0(enumerate_env, "1") == 0;
+
+  if (enumerate_properties) {
+    cam_params = gst_pylon_camera_get_string_properties();
+    stream_params = gst_pylon_stream_grabber_get_string_properties();
+  }
 
   if (NULL == cam_params) {
-    cam_prolog = "No valid cameras where found connected to the system.";
-    stream_prolog = cam_prolog;
+    cam_prolog =
+        enumerate_properties
+            ? "No valid cameras where found connected to the system."
+            : "Camera properties are available at runtime via the "
+              "\"cam::<property>\" child-proxy syntax. Set "
+              "GST_PYLONSRC_ENUMERATE_PROPERTIES=1 to list all properties.";
+    stream_prolog =
+        enumerate_properties
+            ? cam_prolog
+            : "Stream grabber properties are available at runtime via the "
+              "\"stream::<property>\" child-proxy syntax. Set "
+              "GST_PYLONSRC_ENUMERATE_PROPERTIES=1 to list all properties.";
     cam_params = g_strdup("");
     stream_params = g_strdup("");
   } else {
