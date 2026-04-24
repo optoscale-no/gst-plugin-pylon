@@ -2,3 +2,11 @@
 set -e
 # Post-installation script
 ldconfig
+
+# Force GStreamer to re-scan the plugin by updating its mtime.
+# Without this, a stale registry cache entry (from a previous failed load)
+# can cause GStreamer to silently skip the plugin.
+PLUGIN_PATH="/usr/lib/$(dpkg-architecture -qDEB_HOST_MULTIARCH 2>/dev/null || echo aarch64-linux-gnu)/gstreamer-1.0/libgstpylon.so"
+if [ -f "$PLUGIN_PATH" ]; then
+  touch "$PLUGIN_PATH"
+fi
