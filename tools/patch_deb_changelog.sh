@@ -3,7 +3,7 @@
 # Function to parse the L4T version string and format it
 parse_nvidia_version() {
     local version_string="$1"
-    local major minor revision date formatted_date
+    local major minor revision
 
     # Extract major version (e.g., 35)
     major=$(echo "$version_string" | grep -oP '(?<=# R)[0-9]+')
@@ -13,14 +13,9 @@ parse_nvidia_version() {
     minor=$(echo "$minor_revision" | cut -d. -f1)
     revision=$(echo "$minor_revision" | cut -d. -f2)
 
-    # Extract date (e.g., Tue Aug  1 19:57:35 UTC 2023)
-    date=$(echo "$version_string" | grep -oP '(?<=DATE: ).*')
-
-    # Format date (e.g., 20230801195735)
-    formatted_date=$(date -d "$date" +'%Y%m%d%H%M%S')
-
-    # Combine into desired format (e.g., 35.4.1-20230801195735)
-    echo "${major}.${minor}.${revision}-${formatted_date}"
+    # Keep Jetson suffix concise and human-readable.
+    # Example: "R32 (release), REVISION: 4.3" -> "l4t32.4.3"
+    echo "l4t${major}.${minor}.${revision}"
 }
 
 # Function to detect the platform version from /etc/os-release
@@ -97,11 +92,11 @@ sed -i "s/pylon,/pylon (= $PYLON_VERSION),/g" debian/control
 
 echo "Pylon dependency set to ${PYLON_VERSION}"
 
-# Embed the Pylon version into the package version string so the .deb
-# filename and dpkg metadata make the build-time Pylon version obvious.
+# Embed vendor and Pylon version markers into the package version string so the
+# .deb filename and dpkg metadata clearly identify OptoScale downstream builds.
 PYLON_MAJOR_MINOR=$(echo "$PYLON_VERSION" | awk -F. '{print $1"."$2}')
 current_cl_version=$(head -n 1 "$changelog_file" | sed -n 's/.*(\(.*\)).*/\1/p')
-new_cl_version="${current_cl_version}+pylon${PYLON_MAJOR_MINOR}"
+new_cl_version="${current_cl_version}+optoscale+pylon${PYLON_MAJOR_MINOR}"
 sed -i "1s/(${current_cl_version})/(${new_cl_version})/" "$changelog_file"
 
 echo "Package version set to ${new_cl_version}"
