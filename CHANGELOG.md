@@ -1,6 +1,10 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [1.0.1] - 2026-04-28
+### Changed
+- version bump to 1.0.1
+
 ## [1.0.0] - 2024-08-14
 ## Added
 - added script to generate release notes
