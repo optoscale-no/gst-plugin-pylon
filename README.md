@@ -620,6 +620,71 @@ Installation on macOS is currently not supported due to conflicts between meson 
 This target will be integrated after a Basler pylon 7.x release for macOS
 
 
+# Optoscale notes
+
+## Building on machines with mixed libstdc++ versions
+
+Some JetPack 4 machines may have a newer `libstdc++.so.6` (e.g. version 6.0.32 from GCC 12)
+installed alongside the system GCC 7. This happens when CUDA, DeepStream, or other NVIDIA
+packages upgrade the C++ runtime. When building on such a machine, the linker binds symbols
+against the newer `GLIBCXX_3.4.30` version, making the resulting binary incompatible with
+machines that only have the standard libstdc++ (JetPack 5 / Ubuntu 20.04).
+
+### Diagnosing the problem
+
+Check if the system libstdc++ is newer than expected:
+
+```
+strings /usr/lib/aarch64-linux-gnu/libstdc++.so.6 | grep GLIBCXX | tail -5
+```
+
+If it shows `GLIBCXX_3.4.30` or higher on a JetPack 4 machine, you have the mixed version issue.
+
+### Workaround: swap libstdc++ before building
+
+1. Copy the original `libstdc++.so.6.0.25` from a clean JetPack 4 machine (if it was
+   overwritten on the builder):
+
+```
+scp user@clean-jp4:/usr/lib/aarch64-linux-gnu/libstdc++.so.6.0.25 /tmp/
+sudo cp /tmp/libstdc++.so.6.0.25 /usr/lib/aarch64-linux-gnu/
+```
+
+2. Swap to the older library before building:
+
+```
+sudo mv /usr/lib/aarch64-linux-gnu/libstdc++.so.6.0.32 /tmp/libstdc++.so.6.0.32.bak
+sudo rm -f /usr/lib/aarch64-linux-gnu/libstdc++.so.6
+sudo ln -s libstdc++.so.6.0.25 /usr/lib/aarch64-linux-gnu/libstdc++.so.6
+sudo ldconfig
+```
+
+3. Verify the swap (should return empty):
+
+```
+strings /usr/lib/aarch64-linux-gnu/libstdc++.so.6 | grep GLIBCXX_3.4.30
+```
+
+4. Build the package:
+
+```
+PYLON_ROOT=/opt/pylon dpkg-buildpackage -us -uc -rfakeroot
+```
+
+5. Restore the newer library after building:
+
+```
+sudo mv /tmp/libstdc++.so.6.0.32.bak /usr/lib/aarch64-linux-gnu/libstdc++.so.6.0.32
+sudo rm -f /usr/lib/aarch64-linux-gnu/libstdc++.so.6
+sudo ln -s libstdc++.so.6.0.32 /usr/lib/aarch64-linux-gnu/libstdc++.so.6
+sudo ldconfig
+```
+
+> **Important:** The `.6.0.32` file must be moved out of `/usr/lib/aarch64-linux-gnu/`
+> entirely (not just renamed in place), because `ldconfig` automatically creates the
+> `libstdc++.so.6` symlink pointing to the highest version it finds in the directory.
+
+
 # Known issues
 
 * Due to an old issue in the pipeline parser, typos and unsupported feature names will be silently ignored on old GStreamer versions. Typos on top-level properties will be ignored on versions prior to 1.18. Typos on child::properties will be ignored on versions prior to 1.21.
