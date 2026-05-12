@@ -13,12 +13,32 @@ pylon_sources = [
 ]
 
 nvds_dep = cc.find_library('nvbufsurface',
-    dirs: '/opt/nvidia/deepstream/deepstream/lib/',
+    dirs: [
+      '/usr/lib/aarch64-linux-gnu/tegra/',
+      '/usr/lib/aarch64-linux-gnu/nvidia/',
+      '/opt/nvidia/deepstream/deepstream/lib/',
+    ],
     required: false
 )
 cuda_dep = dependency('cuda', version : '>=11', required: false)
 if nvds_dep.found() and cuda_dep.found()
-  nvds_include = include_directories('/opt/nvidia/deepstream/deepstream/sources/includes/')
+  nvds_include_candidates = [
+    '/usr/src/jetson_multimedia_api/include',
+    '/opt/nvidia/deepstream/deepstream/sources/includes',
+  ]
+  nvds_include_path = ''
+  foreach p : nvds_include_candidates
+    if fs.exists(p / 'nvbufsurface.h')
+      nvds_include_path = p
+      break
+    endif
+  endforeach
+
+  if nvds_include_path == ''
+    error('Found libnvbufsurface but could not find nvbufsurface.h header')
+  endif
+
+  nvds_include = include_directories(nvds_include_path)
 
   pylon_sources += ['gstpylondsnvmmbufferfactory.cpp']
 

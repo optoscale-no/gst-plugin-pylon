@@ -1,3 +1,12 @@
+gst-plugin-pylon (1.0.1) unstable; urgency=medium
+
+  * Add enumeration property as a boolean flag
+  * Make build compatible with JetPack 4
+  * Simplify OS version detection in package versioning
+  * Add build instructions for JetPack 4
+
+ -- Sebastian Acuña <sebastian.acuna@optoscale.no>  Thu, 30 Apr 2026 09:00:00 +0200
+
 gst-plugin-pylon (1.0.0) unstable; urgency=medium
 
   * Refer to Package Release Notes for details: https://github.com/basler/gst-plugin-pylon/blob/main/CHANGELOG.md
